@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Dashboard</title>
+    <script defer type="text/javascript" src="../static/js/app.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script type="text/javascript" src="../static/js/jquery.js"></script>
+    <script type="text/javascript" src="../static/js/datepicker.js"></script>
+    <script type="text/javascript" src="../static/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="../static/js/prettify.js"></script>
+    <link rel="stylesheet" media="screen" type="text/css" href="../static/css/datepicker/base.css" />
+    <link rel="stylesheet" media="screen" type="text/css" href="../static/css/datepicker/clean.css" />
+    <link rel="stylesheet" media="screen" type="text/css" href="../static/css/datepicker/prettify.css" />
+    <link rel="stylesheet" media="screen" type="text/css" href="../static/css/bootstrap.min.css" />
+    <link rel="stylesheet" media="screen" type="text/css" href="../static/css/datepicker/prettify.css" />
+
+    <style type="text/css">
+        .title {
+            margin: 3.5% auto;
+            color: deepskyblue;
+            text-align: center;
+        }
+        .selection {
+            display: inline-block;
+            position: absolute;
+            margin-left: 2%
+        }
+        .form-control {
+            width: 230px;
+            height: 29px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            border: 1px solid #CCCCCC;
+            border-radius: 5px 5px 5px 5px;
+            font-weight: bold;
+        }
+        /* Style the calendar custom widget */
+        div.date-range {
+            display: inline-block;
+        }
+        .date-range {
+            position: relative;
+            margin-left: 2%;
+        }
+
+        .date-range-field {
+            width: 290px;
+            height: 26px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            border: 1px solid #CCCCCC;
+            border-radius: 5px 5px 5px 5px;
+        }
+
+        .date-range-field a {
+            color: #B2B2B2;
+            background-color: #F7F7F7;
+            text-align: center;
+            display: block;
+            position: absolute;
+            width: 26px;
+            height: 23px;
+            top: 0;
+            right: 0;
+            text-decoration: none;
+            padding-top: 6px;
+            border-radius: 0 5px 5px 0;
+        }
+
+        .date-range-field span {
+            font-size: 12px;
+            font-weight: bold;
+            color: #404040;
+            position: relative;
+            top: 0;
+            height: 26px;
+            line-height: 26px;
+            left: 5px;
+            width: 250px;
+            text-align: center;
+        }
+
+        .datepicker-calendar {
+            position: absolute;
+            top: 27px;
+            left: 0;
+            overflow: hidden;
+            width: 497px;
+            height: 153px;
+            background-color: #F7F7F7;
+            border: 1px solid #CCCCCC;
+            border-radius: 0 5px 5px 5px;
+            display: none;
+            padding: 10px 0 0 10px;
+            z-index: 10;
+        }
+
+        /* Remove default border from the custom widget since we're adding our own.  TBD: rework the dropdown calendar to use the default borders */
+        .datepicker-calendar div.datepicker {
+            background-color: transparent;
+            border: none;
+            border-radius: 0;
+            padding: 0;
+        }
+    </style>
+    <link rel="stylesheet" href="../static/css/app.css" />
+</head>
+
+<body>
+    <div class="container">
+        <form action="/" method="POST">
+            <h1 class="title">Report</h1>
+            <div id="date-range-A" class="date-range">
+                <div id="date-range-field-A" class="date-range-field">
+                    <span></span>
+                    <a href="#">&#9660;</a>
+                </div>
+                <div id="datepicker-calendar-A" class="datepicker-calendar"></div>
+            </div>
+            <div id="date-range-B" class="date-range">
+                <div id="date-range-field-B" class="date-range-field">
+                    <span></span>
+                    <a href="#">&#9660;</a>
+                </div>
+                <div id="datepicker-calendar-B" class="datepicker-calendar"></div>
+            </div>
+            <div class="selection">
+                <select class="form-control" id="category-input">
+                    {% for label_string in label_string %}
+                    <option value={{loop.index}}>{{ label_string }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+        <div id="graph"></div>
+    </div>
+</body>
+
+<script>
+    var to = new Date();
+    var from = new Date(to.getTime() - 1000 * 60 * 60 * 24 * 31);
+
+   
+    var datePicker1 = $('#datepicker-calendar-A').DatePicker({
+        inline: true,
+        date: [from, to],
+        calendars: 3,
+        mode: 'range',
+        current: new Date(to.getFullYear(), to.getMonth() - 1, 1),
+        onChange: function (dates, el) {
+            $('#date-range-field-A span').text(dates[0].getDate() + ' ' + dates[0].getMonthName(true) + ', ' + dates[0].getFullYear() + ' - ' +
+                dates[1].getDate() + ' ' + dates[1].getMonthName(true) + ', ' + dates[1].getFullYear());
+            loadData();
+        }
+    });
+
+    $('#date-range-field-A span').text(from.getDate() + ' ' + from.getMonthName(true) + ', ' + from.getFullYear() + ' - ' +
+        to.getDate() + ' ' + to.getMonthName(true) + ', ' + to.getFullYear());
+
+    $('#date-range-field-A').bind('click', function () {
+        $('#datepicker-calendar-A').toggle();
+        if ($('#date-range-field-A a').text().charCodeAt(0) == 9660) {
+            // switch to up-arrow
+            $('#date-range-field-A a').html('&#9650;');
+            $('#date-range-field-A').css({ borderBottomLeftRadius: 0, borderBottomRightRadius: 0 });
+            $('#date-range-field-A a').css({ borderBottomRightRadius: 0 });
+        } else {
+            // switch to down-arrow
+            $('#date-range-field-A a').html('&#9660;');
+            $('#date-range-field-A').css({ borderBottomLeftRadius: 5, borderBottomRightRadius: 5 });
+            $('#date-range-field-A a').css({ borderBottomRightRadius: 5 });
+        }
+        return false;
+    });
+
+    $('html').click(function () {
+        if ($('#datepicker-calendar-A').is(":visible")) {
+            $('#datepicker-calendar-A').hide();
+            $('#date-range-field-A a').html('&#9660;');
+            $('#date-range-field-A').css({ borderBottomLeftRadius: 5, borderBottomRightRadius: 5 });
+            $('#date-range-field-A a').css({ borderBottomRightRadius: 5 });
+        }
+    });
+
+    $('#datepicker-calendar-A').click(function (event) {
+        event.stopPropagation();
+    });
+
+   var datePicker2 = $('#datepicker-calendar-B').DatePicker({
+        inline: true,
+        date: [from, to],
+        calendars: 3,
+        mode: 'range',
+        current: new Date(to.getFullYear(), to.getMonth() - 1, 1),
+        onChange: function (dates, el) {
+            $('#date-range-field-B span').text(dates[0].getDate() + ' ' + dates[0].getMonthName(true) + ', ' + dates[0].getFullYear() + ' - ' +
+                dates[1].getDate() + ' ' + dates[1].getMonthName(true) + ', ' + dates[1].getFullYear());
+            loadData();
+        }
+    });
+
+    $('#date-range-field-B span').text(from.getDate() + ' ' + from.getMonthName(true) + ', ' + from.getFullYear() + ' - ' +
+        to.getDate() + ' ' + to.getMonthName(true) + ', ' + to.getFullYear());
+
+    $('#date-range-field-B').bind('click', function () {
+        $('#datepicker-calendar-B').toggle();
+        if ($('#date-range-field-B a').text().charCodeAt(0) == 9660) {
+            $('#date-range-field-B a').html('&#9650;');
+            $('#date-range-field-B').css({ borderBottomLeftRadius: 0, borderBottomRightRadius: 0 });
+            $('#date-range-field-B a').css({ borderBottomRightRadius: 0 });
+        } else {
+            $('#date-range-field-B a').html('&#9660;');
+            $('#date-range-field-B').css({ borderBottomLeftRadius: 5, borderBottomRightRadius: 5 });
+            $('#date-range-field-B a').css({ borderBottomRightRadius: 5 });
+        }
+        return false;
+    });
+
+    $('html').click(function () {
+        if ($('#datepicker-calendar-B').is(":visible")) {
+            $('#datepicker-calendar-B').hide();
+            $('#date-range-field-B a').html('&#9660;');
+            $('#date-range-field-B').css({ borderBottomLeftRadius: 5, borderBottomRightRadius: 5 });
+            $('#date-range-field-B a').css({ borderBottomRightRadius: 5 });
+        }
+    });
+
+    $('#datepicker-calendar-B').click(function (event) {
+        event.stopPropagation();
+    });
+  
+    loadData();
+
+
+    function loadData() {
+        var date1 = datePicker1.DatePickerGetDate()[0];
+        var date2 = datePicker2.DatePickerGetDate()[0];
+
+        var data1 = {
+            start_date: date1[0].getFullYear() + '-' + ("0" + (date1[0].getMonth() + 1)).slice(-2) + '-' + ("0" + date1[0].getDate()).slice(-2),
+            end_date: date1[1].getFullYear() + '-' + ("0" + (date1[1].getMonth() + 1)).slice(-2) + '-' + ("0" + date1[1].getDate()).slice(-2)
+        }
+        
+       var data2 = {
+            start_date: date2[0].getFullYear() + '-' + ("0" + (date2[0].getMonth() + 1)).slice(-2) + '-' + ("0" + date2[0].getDate()).slice(-2),
+            end_date: date2[1].getFullYear() + '-' + ("0" + (date2[1].getMonth() + 1)).slice(-2) + '-' + ("0" + date2[1].getDate()).slice(-2)
+        }
+
+        var request = {
+            data1 : data1,
+            data2 : data2,
+            category: $("#category-input").val()
+        }
+
+        $.ajax({ 
+            url: "{{ url_for('api') }}", 
+            dataType: 'json',
+            type: "POST",
+            data: JSON.stringify(request),
+            contentType: 'application/json',
+            success: function(result){
+                var trace_a = {
+                    x: result['x_data1'],
+                    y: result['y_data1'],   
+                    type: 'Trace_A',
+                }
+
+                var trace_b = {
+                    x: result['x_data2'],
+                    y: result['y_data2'],   
+                    type: 'Trace_B',
+                }
+                var data = [trace_a, trace_b];
+
+                Plotly.newPlot('graph', data, {
+                    xaxis: {
+                        tickformat: '%Y-%m-%d'
+                    }
+                }, { showSendToCloud: true });
+            },
+            error: function (request, status, error) { 
+                alert('Error: ' + error); 
+            },
+        });
+    }
+    
+</script>
+
+</html>

@@ -1,0 +1,11 @@
+Flask==0.12.2
+Flask-Bcrypt==0.7.1
+Flask-Cors==3.0.7
+Flask-DebugToolbar==0.10.1
+Flask-JWT-Extended==3.12.1
+Flask-RESTful==0.3.6
+requests==2.22.0
+requests-file==1.4.3
+mysqlclient==1.4.5
+PyMySQL==0.93
+xlrd==1.2.0
